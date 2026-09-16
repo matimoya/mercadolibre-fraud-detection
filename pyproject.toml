@@ -2,6 +2,7 @@
 name = "mercadolibre-fraud-detection"
 version = "0.1.0"
 description = "Solucion para el challenge de deteccion de fraude de Mercado Libre"
+readme = "README.md"
 requires-python = ">=3.11,<3.13"
 dependencies = [
     "imbalanced-learn>=0.14.2",
