@@ -176,8 +176,10 @@ def gain_by_policy(
     techo = max_gain(frame, gain_rate, target, amount)
     rows = {}
     for name, approve in policies.items():
+        # expected_gain valida alineación y nulos: tiene que ver la máscara cruda,
+        # porque astype(bool) convertiría un nulo en True —aprobar— en silencio.
+        gain = expected_gain(frame, approve, gain_rate, target, amount)
         mask = approve.astype(bool)
-        gain = expected_gain(frame, mask, gain_rate, target, amount)
         rows[name] = {
             "ganancia": gain,
             "pct_del_maximo": 100 * gain / techo if techo else float("nan"),
