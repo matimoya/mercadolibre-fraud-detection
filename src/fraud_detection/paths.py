@@ -38,6 +38,8 @@ ROOT = encontrar_raiz()
 DATA_DIR = ROOT / "data"
 DATASET_CSV = DATA_DIR / DATASET
 MODELS_DIR = ROOT / "models"
+BEST_PARAMS_JSON = MODELS_DIR / "mejores_parametros.json"
+MODEL_JOBLIB = MODELS_DIR / "xgboost.joblib"
 NOTEBOOKS_DIR = ROOT / "notebooks"
 FIGURES_DIR = ROOT / "informe" / "figuras"
 

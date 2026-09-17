@@ -1,18 +1,20 @@
-"""Utilidades de validación temporal para futuros experimentos de modelado."""
+"""Validación temporal: cada bloque entrena con el pasado y se mide en el futuro."""
 
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import TimeSeriesSplit
 
+from fraud_detection.constants import N_SPLITS
 
-def temporal_folds(dates: pd.Series, n_splits: int = 3, gap_days: int = 0):
+
+def temporal_folds(dates: pd.Series, n_splits: int = N_SPLITS, gap_days: int = 0):
     """Generar folds expansivos con TimeSeriesSplit sobre días calendario.
 
     Parameters
     ----------
     dates : pandas.Series
         Fechas válidas, aunque las filas no estén ordenadas.
-    n_splits : int, default=3
+    n_splits : int, default=N_SPLITS
         Número de bloques de validación.
     gap_days : int, default=0
         Días excluidos entre entrenamiento y validación.

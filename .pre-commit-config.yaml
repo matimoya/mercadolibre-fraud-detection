@@ -35,13 +35,21 @@ repos:
         entry: uv run pylint
         language: system
         types: [python]
-        files: '^src/.*\.py$'
+        files: '^(src|tests)/.*\.py$'
         args: ["--score=no"]
 
       - id: mypy
         name: mypy
-        entry: uv run mypy src
+        entry: uv run mypy
         language: system
         types: [python]
-        files: '^src/.*\.py$'
+        files: '^(src|tests)/.*\.py$'
+        pass_filenames: false
+
+      - id: pytest
+        name: pytest
+        entry: uv run pytest
+        language: system
+        types: [python]
+        files: '^(src|tests)/.*\.py$'
         pass_filenames: false
