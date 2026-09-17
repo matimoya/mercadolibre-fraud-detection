@@ -1,0 +1,16 @@
+.DS_Store
+.git
+.gitignore
+.mypy_cache
+.pytest_cache
+.ruff_cache
+.venv
+**/.ipynb_checkpoints
+**/__pycache__
+**/*.py[cod]
+
+data
+models
+mlartifacts
+mlflow.db
+machete.md
