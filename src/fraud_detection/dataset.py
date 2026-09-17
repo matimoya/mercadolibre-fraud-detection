@@ -4,27 +4,17 @@ Centralizado para que todos los notebooks partan del mismo frame: misma
 normalización de texto y mismo índice. No guarda nada en disco.
 """
 
+from pathlib import Path
+
 import pandas as pd
 
 from fraud_detection.constants import DATE, TEST_START
+from fraud_detection.paths import DATASET_CSV
 
-DATASET = "MercadoLibre Data Scientist Technical Challenge - Dataset.csv"
 
-
-def load_transactions(data_dir: str = "../data") -> pd.DataFrame:
-    """Leer el CSV del enunciado con la fecha ya parseada.
-
-    Parameters
-    ----------
-    data_dir : str, default="../data"
-        Carpeta que contiene el CSV, relativa al directorio del kernel.
-
-    Returns
-    -------
-    pandas.DataFrame
-        Las transacciones tal como vienen, sin filtrar ni transformar.
-    """
-    return pd.read_csv(f"{data_dir}/{DATASET}", parse_dates=[DATE])
+def load_transactions(csv: Path | str = DATASET_CSV) -> pd.DataFrame:
+    """Leer el CSV del enunciado con la fecha ya parseada, sin filtrar nada."""
+    return pd.read_csv(csv, parse_dates=[DATE])
 
 
 def normalize_text(frame: pd.DataFrame) -> pd.DataFrame:

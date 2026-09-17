@@ -1,41 +1,29 @@
 """Registro de experimentos con MLflow.
 
-El store queda en la raíz del proyecto y no en `notebooks/`, para que las tres
-etapas escriban en el mismo lugar sin importar desde dónde se ejecuten. Es una
-base SQLite: no hace falta levantar ningún servidor, y MLflow 3.16 dejó de
-aceptar el store de archivos.
+Es una base SQLite en la raíz del proyecto: no hace falta levantar ningún
+servidor, y MLflow 3.16 dejó de aceptar el store de archivos.
 """
 
 import logging
 import os
 from pathlib import Path
 
+from fraud_detection.paths import ARTIFACTS_DIR, TRACKING_DB
+
 # El aviso de MLflow sobre su skill de tracing se emite al importar el paquete,
 # así que la variable tiene que quedar antes del import y no junto al resto.
 os.environ.setdefault("MLFLOW_DISABLE_AGENT_HINT", "1")
 
-import mlflow  # pylint: disable=wrong-import-position
-
-TRACKING_DB = "../mlflow.db"
-ARTIFACTS_DIR = "../mlartifacts"
+import mlflow  # pylint: disable=wrong-import-position,wrong-import-order
 
 # MLflow avisa por INFO cada vez que crea un experimento o una corrida.
 logging.getLogger("mlflow").setLevel(logging.WARNING)
 
 
 def configurar(
-    experimento: str, tracking_db: str = TRACKING_DB, artifacts_dir: str = ARTIFACTS_DIR
+    experimento: str, tracking_db: Path = TRACKING_DB, artifacts_dir: Path = ARTIFACTS_DIR
 ) -> str:
     """Apuntar MLflow al store local y seleccionar el experimento.
-
-    Parameters
-    ----------
-    experimento : str
-        Nombre bajo el que se agrupan las corridas de esta etapa.
-    tracking_db : str, default=TRACKING_DB
-        Base SQLite con parámetros y métricas, relativa al directorio del kernel.
-    artifacts_dir : str, default=ARTIFACTS_DIR
-        Carpeta de artefactos —modelos, tablas—, que no entran en la base.
 
     Returns
     -------
