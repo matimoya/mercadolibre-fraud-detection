@@ -23,8 +23,9 @@ ARTIFACTS_DIR = "../mlartifacts"
 logging.getLogger("mlflow").setLevel(logging.WARNING)
 
 
-def configurar(experimento: str, tracking_db: str = TRACKING_DB,
-               artifacts_dir: str = ARTIFACTS_DIR) -> str:
+def configurar(
+    experimento: str, tracking_db: str = TRACKING_DB, artifacts_dir: str = ARTIFACTS_DIR
+) -> str:
     """Apuntar MLflow al store local y seleccionar el experimento.
 
     Parameters
@@ -52,9 +53,13 @@ def configurar(experimento: str, tracking_db: str = TRACKING_DB,
     return uri
 
 
-def registrar(nombre: str, parametros: dict | None = None,
-              metricas: dict | None = None, etiquetas: dict | None = None,
-              anidada: bool = False) -> str:
+def registrar(
+    nombre: str,
+    parametros: dict | None = None,
+    metricas: dict | None = None,
+    etiquetas: dict | None = None,
+    anidada: bool = False,
+) -> str:
     """Guardar una corrida con sus parámetros y métricas.
 
     Parameters
