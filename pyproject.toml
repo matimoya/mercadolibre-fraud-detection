@@ -30,6 +30,9 @@ dev = [
     "pytest-cov>=7.1.0",
 ]
 
+[project.scripts]
+fraud-detection = "fraud_detection.cli:main"
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
@@ -48,7 +51,8 @@ addopts = "--cov=fraud_detection --cov-report=term-missing --cov-fail-under=88"
 [tool.coverage.run]
 # plots: las figuras se juzgan mirándolas, no con una aserción.
 # tracking: es una capa fina sobre MLflow, y testearla sería testear MLflow.
-omit = ["*/plots.py", "*/tracking.py"]
+# cli: los comandos necesitan el CSV; lo que sí tiene lógica es el parser, y eso se testea.
+omit = ["*/plots.py", "*/tracking.py", "*/cli.py"]
 
 [tool.mypy]
 python_version = "3.11"

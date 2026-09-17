@@ -11,6 +11,9 @@ TEST_START = pd.Timestamp("2020-04-13")
 # Folds temporales: 4 es la menor dispersión sobre los 36 días de desarrollo.
 N_SPLITS = 4
 
+# Pruebas de la búsqueda de hiperparámetros.
+N_TRIALS = 40
+
 # Semilla única, para que el corrector reproduzca los números del informe.
 RANDOM_STATE = 42
 

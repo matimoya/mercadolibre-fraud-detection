@@ -11,12 +11,27 @@ from sklearn.base import BaseEstimator, clone
 from sklearn.metrics import average_precision_score, roc_auc_score
 from sklearn.pipeline import Pipeline
 
-from fraud_detection.constants import DATE, TARGET
+from fraud_detection.constants import DATE, RANDOM_STATE, TARGET
 from fraud_detection.evaluation import expected_gain, optimal_probability_threshold
 from fraud_detection.features import build_preprocessor
 from fraud_detection.paths import MODEL_JOBLIB
 
 Bloques = Sequence[tuple[np.ndarray, np.ndarray]]
+
+XGBOOST_BASE = {
+    "tree_method": "hist",
+    "eval_metric": "aucpr",
+    "n_jobs": -1,
+    "random_state": RANDOM_STATE,
+}
+XGBOOST_DEFAULT = {
+    "n_estimators": 500,
+    "learning_rate": 0.05,
+    "max_depth": 5,
+    "subsample": 0.8,
+    "colsample_bytree": 0.8,
+    **XGBOOST_BASE,
+}
 
 
 def build_model(estimador: BaseEstimator, scale: bool = False, use_score: bool = True) -> Pipeline:
