@@ -11,3 +11,9 @@ __pycache__/
 data/
 models/
 machete.md
+mlflow.db
+mlartifacts/
+
+# Borrador del informe: andamiaje local. El PDF final sí se versiona.
+informe/*
+!informe/*.pdf
