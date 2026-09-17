@@ -73,13 +73,17 @@ reproducibles entre corridas.
 | Módulo | Contenido |
 | --- | --- |
 | `constants.py` | Contrato de datos y reglas de negocio. |
+| `paths.py` | Rutas del proyecto, resueltas desde la raíz. |
 | `dataset.py` | Carga, normalización y reserva temporal. |
 | `diagnostics.py` | Diagnósticos de riesgo y exposición. |
 | `plots.py` | Gráficos de distribución, riesgo y ganancia. |
 | `evaluation.py` | Ganancia, umbrales y barridos de cortes. |
 | `features.py` | Preprocesamiento y `FrequencyEncoder`. |
 | `modeling.py` | Folds temporales sobre días calendario. |
+| `training.py` | Armado, entrenamiento y persistencia del modelo. |
+| `tuning.py` | Búsqueda de hiperparámetros con Optuna. |
 | `tracking.py` | Registro de experimentos en MLflow. |
+| `cli.py` | Comandos para correr el pipeline desde la terminal. |
 
 `diagnostics.py` y `plots.py` son herramientas de análisis e informes, no
 transformadores de producción; `features.py` sí produce las entradas del modelo.
@@ -135,6 +139,17 @@ etiquetas y artefactos. La documentación oficial describe estas vistas en
 es lo que `05_evaluation.ipynb` carga para entrenar el modelo final. Esa
 separación es lo que hace que el período reservado se use una sola vez.
 
+## Línea de comandos
+
+El pipeline también corre sin abrir Jupyter. Los comandos delegan en el mismo
+código que usan los notebooks, así que no hay dos caminos que puedan divergir:
+
+```shell
+uv run fraud-detection tune --trials 40   # busca hiperparámetros
+uv run fraud-detection train              # entrena y guarda el artefacto
+uv run fraud-detection evaluate           # mide sobre el período reservado
+```
+
 ## Controles de calidad
 
 Ejecutar todos los hooks dentro de la imagen:
@@ -142,6 +157,12 @@ Ejecutar todos los hooks dentro de la imagen:
 ```shell
 docker run --rm -v "$PWD:/workspace" meli-fraud \
   uv run --locked pre-commit run --all-files
+```
+
+Los tests corren sin el CSV, así que funcionan sobre un clon recién bajado:
+
+```shell
+docker run --rm -v "$PWD:/workspace" meli-fraud uv run --locked pytest
 ```
 
 Pylint y mypy también pueden comprobarse individualmente:
@@ -153,8 +174,10 @@ docker run --rm -v "$PWD:/workspace" meli-fraud \
   uv run --locked mypy src/fraud_detection
 ```
 
-Black formatea el código Python y las celdas de los notebooks. Pylint y mypy se
-aplican a `src/`; markdownlint revisa los archivos Markdown.
+Black formatea el código Python y las celdas de los notebooks. Pylint, mypy y
+pytest se aplican a `src/` y `tests/`; markdownlint revisa los archivos Markdown.
+La cobertura excluye `plots.py`, `tracking.py` y `cli.py`, por los motivos
+anotados en `pyproject.toml`.
 
 ## Ejecución local alternativa
 
@@ -172,8 +195,9 @@ En macOS, XGBoost necesita además el runtime de OpenMP:
 brew install libomp
 ```
 
-La carga usa una ruta relativa; el directorio de trabajo del kernel debe ser
-`notebooks/`. En VS Code se puede seleccionar `.venv/bin/python` como entorno.
+Las rutas se resuelven desde la raíz del repositorio, así que los notebooks
+corren desde cualquier directorio. En VS Code se puede seleccionar
+`.venv/bin/python` como entorno.
 Para instalar y ejecutar los hooks localmente:
 
 ```shell
