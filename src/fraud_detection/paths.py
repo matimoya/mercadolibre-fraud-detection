@@ -24,12 +24,9 @@ def encontrar_raiz() -> Path:
         `FRAUD_DETECTION_ROOT`.
     """
     declarada = os.environ.get(VARIABLE_DE_ENTORNO)
-    if declarada:
-        return Path(declarada).resolve()
-
-    raiz = Path(__file__).resolve().parents[2]
+    raiz = Path(declarada).resolve() if declarada else Path(__file__).resolve().parents[2]
     if not (raiz / MARCA).is_file():
-        raise RuntimeError(f"No hay {MARCA} en {raiz}. Definir {VARIABLE_DE_ENTORNO}.")
+        raise RuntimeError(f"No hay {MARCA} en {raiz}. Revisar {VARIABLE_DE_ENTORNO}.")
     return raiz
 
 

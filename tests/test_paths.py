@@ -27,13 +27,22 @@ def test_rutas(ruta: Path):
 
 def test_variable_de_entorno(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     """Es el escape para cuando el paquete se instala fuera del repositorio."""
+    (tmp_path / paths.MARCA).touch()
     monkeypatch.setenv(paths.VARIABLE_DE_ENTORNO, str(tmp_path))
     assert paths.encontrar_raiz() == tmp_path.resolve()
 
 
-def test_sin_raiz(monkeypatch: pytest.MonkeyPatch):
-    """Fallar temprano es mejor que leer un CSV inexistente a mitad de un notebook."""
+@pytest.mark.parametrize("declarada", [None, "/tmp"])
+def test_sin_raiz(declarada: str | None, monkeypatch: pytest.MonkeyPatch):
+    """Fallar temprano es mejor que leer un CSV inexistente a mitad de un notebook.
+
+    Vale también para la variable de entorno: si apunta a un lugar sin la marca,
+    aceptarla dejaría todas las rutas mal sin que nada avise.
+    """
     monkeypatch.delenv(paths.VARIABLE_DE_ENTORNO, raising=False)
-    monkeypatch.setattr(paths, "MARCA", "archivo-que-no-existe.toml")
+    if declarada:
+        monkeypatch.setenv(paths.VARIABLE_DE_ENTORNO, declarada)
+    else:
+        monkeypatch.setattr(paths, "MARCA", "archivo-que-no-existe.toml")
     with pytest.raises(RuntimeError, match=paths.VARIABLE_DE_ENTORNO):
         paths.encontrar_raiz()

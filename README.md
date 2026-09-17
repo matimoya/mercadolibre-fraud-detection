@@ -196,8 +196,9 @@ brew install libomp
 ```
 
 Las rutas se resuelven desde la raíz del repositorio, así que los notebooks
-corren desde cualquier directorio. En VS Code se puede seleccionar
-`.venv/bin/python` como entorno.
+corren desde cualquier directorio. `.vscode/settings.json` ya apunta VS Code
+a `.venv/bin/python`; si los imports no resuelven, es que está seleccionado
+otro intérprete.
 Para instalar y ejecutar los hooks localmente:
 
 ```shell
