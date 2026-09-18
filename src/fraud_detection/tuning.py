@@ -73,7 +73,7 @@ def gain_over_folds(
 
 def _anotar_prueba(_estudio: optuna.Study, prueba: optuna.trial.FrozenTrial) -> None:
     """Guardar cada prueba completada como corrida anidada."""
-    if prueba.value is not None:
+    if prueba.state == optuna.trial.TrialState.COMPLETE:
         registrar(
             f"prueba {prueba.number}",
             parametros=prueba.params,
@@ -86,7 +86,7 @@ def _informar_prueba(n_trials: int):
     """Una línea de log por prueba terminada, completa o podada."""
 
     def informar(estudio: optuna.Study, prueba: optuna.trial.FrozenTrial) -> None:
-        if prueba.value is None:
+        if prueba.state == optuna.trial.TrialState.PRUNED:
             logger.info(
                 "prueba %d/%d: podada en el bloque %s",
                 prueba.number + 1,
