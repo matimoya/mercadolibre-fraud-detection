@@ -12,5 +12,6 @@
 data
 models
 mlartifacts
+logs
 mlflow.db
 machete.md

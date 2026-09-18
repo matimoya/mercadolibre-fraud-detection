@@ -37,8 +37,17 @@ DATASET_CSV = DATA_DIR / DATASET
 MODELS_DIR = ROOT / "models"
 BEST_PARAMS_JSON = MODELS_DIR / "mejores_parametros.json"
 MODEL_JOBLIB = MODELS_DIR / "xgboost.joblib"
+TRIALS_CSV = MODELS_DIR / "pruebas_optuna.csv"
+EVALUATION_CSV = MODELS_DIR / "evaluacion_reservado.csv"
+LOGS_DIR = ROOT / "logs"
 NOTEBOOKS_DIR = ROOT / "notebooks"
 FIGURES_DIR = ROOT / "informe" / "figuras"
 
 TRACKING_DB = ROOT / "mlflow.db"
 ARTIFACTS_DIR = ROOT / "mlartifacts"
+
+
+def desde_raiz(ruta: Path) -> Path:
+    """La ruta relativa a la raíz, más corta de leer en un log; si queda afuera, absoluta."""
+    absoluta = ruta.resolve()
+    return absoluta.relative_to(ROOT) if absoluta.is_relative_to(ROOT) else absoluta

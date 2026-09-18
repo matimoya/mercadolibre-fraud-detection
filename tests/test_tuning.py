@@ -3,7 +3,6 @@
 import json
 from pathlib import Path
 
-import optuna
 import pandas as pd
 import pytest
 from xgboost import XGBClassifier
@@ -23,7 +22,6 @@ def test_handoff_entre_busqueda_y_evaluacion(development: pd.DataFrame, tmp_path
     Es el único acoplamiento entre las dos etapas: si el JSON no alcanza para
     reconstruir el modelo, la evaluación final no reproduce lo que se eligió.
     """
-    optuna.logging.set_verbosity(optuna.logging.WARNING)
     bloques = list(temporal_folds(development[DATE]))
 
     estudio = run_search(development, bloques, n_trials=PRUEBAS, registrar_en_mlflow=False)

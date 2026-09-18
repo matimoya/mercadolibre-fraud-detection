@@ -19,6 +19,8 @@ import mlflow  # pylint: disable=wrong-import-position,wrong-import-order
 # MLflow avisa por INFO cada vez que crea un experimento o una corrida.
 logging.getLogger("mlflow").setLevel(logging.WARNING)
 
+logger = logging.getLogger(__name__)
+
 
 def configurar(
     experimento: str, tracking_db: Path = TRACKING_DB, artifacts_dir: Path = ARTIFACTS_DIR
@@ -38,6 +40,7 @@ def configurar(
     if mlflow.get_experiment_by_name(experimento) is None:
         mlflow.create_experiment(experimento, artifact_location=artefactos.as_uri())
     mlflow.set_experiment(experimento)
+    logger.debug("MLflow en %s, experimento %s", uri, experimento)
     return uri
 
 

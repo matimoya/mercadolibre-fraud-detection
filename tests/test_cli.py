@@ -6,11 +6,15 @@ from fraud_detection import cli
 from fraud_detection.constants import N_TRIALS
 
 
-@pytest.mark.parametrize("nombre", ["tune", "train", "evaluate"])
-def test_cada_comando_enruta_a_su_funcion(nombre: str):
+@pytest.mark.parametrize(
+    "comando, funcion",
+    [("tune", cli.tune), ("train", cli.train), ("evaluate", cli.evaluate), ("all", cli.run_all)],
+)
+def test_cada_comando_enruta_a_su_funcion(comando: str, funcion):
     """Un comando apuntando a la función equivocada no lo detecta ningún otro test."""
-    argumentos = cli.construir_parser().parse_args([nombre])
-    assert argumentos.funcion is getattr(cli, nombre)
+    argumentos = cli.construir_parser().parse_args([comando])
+    assert argumentos.funcion is funcion
+    assert argumentos.verbose is False
 
 
 def test_trials_tiene_default_y_se_puede_pisar():

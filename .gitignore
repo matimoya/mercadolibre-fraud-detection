@@ -14,6 +14,7 @@ models/
 machete.md
 mlflow.db
 mlartifacts/
+logs/
 
 # Borrador del informe: andamiaje local. El PDF final sí se versiona.
 informe/*

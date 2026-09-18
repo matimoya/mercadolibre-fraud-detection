@@ -1,5 +1,6 @@
 """Armado, entrenamiento y persistencia del modelo."""
 
+import logging
 from collections.abc import Iterator, Sequence
 from pathlib import Path
 from typing import Any
@@ -14,7 +15,9 @@ from sklearn.pipeline import Pipeline
 from fraud_detection.constants import DATE, RANDOM_STATE, TARGET
 from fraud_detection.evaluation import expected_gain, optimal_probability_threshold
 from fraud_detection.features import build_preprocessor
-from fraud_detection.paths import MODEL_JOBLIB
+from fraud_detection.paths import MODEL_JOBLIB, desde_raiz
+
+logger = logging.getLogger(__name__)
 
 Bloques = Sequence[tuple[np.ndarray, np.ndarray]]
 
@@ -104,6 +107,11 @@ def evaluate_on_folds(
 
 def train(development: pd.DataFrame, estimador: BaseEstimator, **opciones: Any) -> Pipeline:
     """Entrenar con todo el desarrollo, que es lo que se aplica al período reservado."""
+    logger.info(
+        "entrenando con %d transacciones hasta %s",
+        len(development),
+        f"{development[DATE].max():%Y-%m-%d}",
+    )
     return build_model(estimador, **opciones).fit(
         development.drop(columns=[TARGET]), development[TARGET]
     )
@@ -129,6 +137,7 @@ def save_model(
         },
         destino,
     )
+    logger.info("modelo guardado en %s", desde_raiz(destino))
     return destino
 
 

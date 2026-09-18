@@ -3,8 +3,8 @@
 import pandas as pd
 import pytest
 
-from fraud_detection.constants import DATE, TEST_START
-from fraud_detection.dataset import normalize_text, split_development
+from fraud_detection.constants import AMOUNT, DATE, TARGET, TEST_START
+from fraud_detection.dataset import normalize_text, split_development, validate_transactions
 
 UN_DIA = pd.Timedelta(days=1)
 
@@ -44,3 +44,24 @@ def test_normalizacion():
     assert limpio.g.tolist()[:2] == ["AR", "BR"]
     assert limpio.g.isna().sum() == 1
     pd.testing.assert_series_equal(limpio.monto, datos.monto)
+
+
+def test_contrato(development: pd.DataFrame):
+    """Un frame con el contrato del enunciado pasa la validación sin cambios."""
+    validate_transactions(development)
+
+
+@pytest.mark.parametrize(
+    "romper",
+    [
+        lambda datos: datos.assign(**{AMOUNT: -datos[AMOUNT]}),
+        lambda datos: datos.assign(**{TARGET: 2}),
+        lambda datos: datos.assign(**{DATE: pd.NaT}),
+        lambda datos: datos.drop(columns=["score"]),
+    ],
+    ids=["monto_negativo", "etiqueta_fuera_de_dominio", "fecha_nula", "columna_faltante"],
+)
+def test_contrato_roto(development: pd.DataFrame, romper):
+    """Un error de origen detiene el pipeline en vez de corregirse en silencio."""
+    with pytest.raises(ValueError):
+        validate_transactions(romper(development))

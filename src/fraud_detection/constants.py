@@ -1,4 +1,4 @@
-"""Contrato de datos y reglas de negocio compartidos entre notebooks."""
+"""Contrato de datos, reglas de negocio y configuración de ejecución."""
 
 import pandas as pd
 
@@ -32,3 +32,13 @@ BINARY_COLUMNS = ["n"]
 
 # 'k' es uniforme(0, 1) e independiente de la etiqueta: variable de control.
 NOISE_COLUMNS = ["k"]
+
+# --- Configuración de ejecución: dónde se registra cada corrida y cómo se ve. ---
+
+# Un experimento de MLflow por notebook que registra; la CLI escribe en el de la búsqueda.
+EXPERIMENTO_MODELOS = "03-comparacion-modelos"
+EXPERIMENTO_BUSQUEDA = "04-busqueda-hiperparametros"
+EXPERIMENTO_EVALUACION = "05-evaluacion-final"
+
+FORMATO_LOG = "%(asctime)s %(levelname)-7s %(name)s | %(message)s"
+FORMATO_HORA_LOG = "%H:%M:%S"
