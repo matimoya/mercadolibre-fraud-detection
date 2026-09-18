@@ -28,7 +28,7 @@ from fraud_detection.constants import (
     RANDOM_STATE,
 )
 
-# El EDA mostró que la frecuencia de 'j' tiene señal propia, aparte de su tasa.
+# El EDA mostró que la frecuencia de 'j' distingue el fraude por sí sola, aparte de su tasa.
 FREQUENCY_COLUMNS = ["j"]
 TIME_FEATURES = ["hora_sin", "hora_cos", "es_madrugada"]
 MISSING_LABEL = "Ausente"

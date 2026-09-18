@@ -89,7 +89,7 @@ def rate_table(
     Notes
     -----
     Los nulos forman su propio grupo: donde la ausencia es informativa,
-    descartarlos borraría la señal. monto_en_fraude es exposición si se
+    descartarlos borraría ese patrón. monto_en_fraude es exposición si se
     aprobara el segmento, no una pérdida observada.
     """
     check_labels(frame, target)
