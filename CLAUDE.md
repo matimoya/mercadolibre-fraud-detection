@@ -11,7 +11,8 @@
 
 ## Dónde va cada cosa
 
-- `constants.py`: contrato de datos y reglas de negocio. No toca archivos.
+- `constants.py`: contrato de datos, reglas de negocio y configuración de ejecución
+  (experimentos de MLflow, formato de logs). No toca archivos.
 - `paths.py`: rutas, resueltas desde la raíz del repositorio. Nunca relativas
   al directorio de trabajo.
 - Resto de `src/fraud_detection/`: un módulo por responsabilidad, plano.

@@ -72,9 +72,9 @@ reproducibles entre corridas.
 
 | Módulo | Contenido |
 | --- | --- |
-| `constants.py` | Contrato de datos y reglas de negocio. |
+| `constants.py` | Contrato de datos, reglas de negocio y configuración. |
 | `paths.py` | Rutas del proyecto, resueltas desde la raíz. |
-| `dataset.py` | Carga, normalización y reserva temporal. |
+| `dataset.py` | Carga, validación del contrato y reserva temporal. |
 | `diagnostics.py` | Diagnósticos de riesgo y exposición. |
 | `plots.py` | Gráficos de distribución, riesgo y ganancia. |
 | `evaluation.py` | Ganancia, umbrales y barridos de cortes. |
@@ -83,6 +83,7 @@ reproducibles entre corridas.
 | `training.py` | Armado, entrenamiento y persistencia del modelo. |
 | `tuning.py` | Búsqueda de hiperparámetros con Optuna. |
 | `tracking.py` | Registro de experimentos en MLflow. |
+| `logs.py` | Registro de cada corrida en consola y archivo. |
 | `cli.py` | Comandos para correr el pipeline desde la terminal. |
 
 `diagnostics.py` y `plots.py` son herramientas de análisis e informes, no
@@ -105,6 +106,19 @@ docker run --rm -v "$PWD:/workspace" meli-fraud sh -c '
 ```
 
 `03` y `04` tardan alrededor de dos minutos cada una; el resto, segundos.
+
+Sin Docker, con el entorno local ya instalado (ver
+[Ejecución local alternativa](#ejecución-local-alternativa)):
+
+```shell
+for notebook in notebooks/0*.ipynb; do
+  uv run --locked jupyter execute "$notebook" --inplace || break
+done
+```
+
+`--inplace` guarda las salidas en el mismo archivo, así que `git diff` muestra
+qué número cambió. Con las semillas fijas, entre dos corridas solo deberían
+cambiar tiempos, identificadores de MLflow y el conteo de corridas registradas.
 
 ## Experimentos con MLflow
 
@@ -148,7 +162,77 @@ código que usan los notebooks, así que no hay dos caminos que puedan divergir:
 uv run fraud-detection tune --trials 40   # busca hiperparámetros
 uv run fraud-detection train              # entrena y guarda el artefacto
 uv run fraud-detection evaluate           # mide sobre el período reservado
+uv run fraud-detection all                # las tres etapas, en orden
+uv run fraud-detection all --help         # opciones de cada comando
 ```
+
+Dentro de la imagen es el mismo comando, con el proyecto montado para que el
+CSV se lea y los artefactos queden en el disco local:
+
+```shell
+docker run --rm -v "$PWD:/workspace" meli-fraud \
+  uv run --locked fraud-detection all
+```
+
+Algunos usos habituales:
+
+```shell
+# Probar el circuito completo rápido, con pocas pruebas de Optuna.
+uv run fraud-detection all --trials 3
+
+# Reentrenar con la configuración ya elegida, sin volver a buscar.
+uv run fraud-detection train
+
+# Ver también el detalle por bloque de validación.
+uv run fraud-detection tune -v
+
+# Guardar solo la tabla final; los logs siguen saliendo por la terminal.
+uv run fraud-detection evaluate > resultado.txt
+```
+
+Así se ve una corrida de `tune` (abreviada):
+
+```text
+23:02:48 INFO    fraud_detection.logs | corrida all | log en logs/all-20260917-230248.log
+23:02:48 INFO    fraud_detection.dataset | contrato de datos verificado
+23:02:49 INFO    fraud_detection.tuning | búsqueda: 40 pruebas sobre 4 bloques
+23:02:51 INFO    fraud_detection.tuning | prueba 1/40: ganancia +124322 (mejor +124322)
+...
+23:04:24 INFO    fraud_detection.cli | 40 pruebas, 21 podadas
+23:04:25 INFO    fraud_detection.logs | terminado en 97 s
+```
+
+Cada etapa lee de disco lo que dejó la anterior y escribe su propia salida:
+
+| Etapa | Lee | Escribe |
+| --- | --- | --- |
+| `tune` | CSV | `mejores_parametros.json`, `pruebas_optuna.csv`, MLflow |
+| `train` | CSV y el JSON | `xgboost.joblib` |
+| `evaluate` | CSV y el joblib | `evaluacion_reservado.csv` y la tabla |
+
+`tune` y `train` están separados a propósito: buscar hiperparámetros es caro y
+se hace pocas veces, reentrenar es barato y se repite con cada dato nuevo. El
+JSON es el contrato entre las dos, así que reentrenar no obliga a buscar de nuevo.
+
+Todas las etapas validan el contrato de datos antes de empezar y cortan ante un
+CSV con fechas, etiquetas o montos inválidos. El progreso sale por la terminal
+y la corrida completa, con el detalle por bloque, queda en
+`logs/<comando>-<fecha>.log`, excluida de Git. `-v` muestra ese detalle también
+en la terminal. La tabla de `evaluate` va por la salida estándar y los logs por
+la de errores, así que `fraud-detection evaluate > resultado.txt` guarda solo la
+tabla. En los notebooks esos logs no aparecen: solo la CLI los configura.
+
+Respecto de la versión anterior de la CLI, los comandos `tune`, `train` y
+`evaluate` se usan igual. Lo nuevo es:
+
+- `all`, que corre las tres etapas en orden.
+- `-v`, para ver el detalle por bloque, y el archivo de log de cada corrida.
+- `tune` registra en el experimento `04-busqueda-hiperparametros` y escribe el
+  mismo JSON que `04_tuning.ipynb`, incluida la ganancia de la configuración
+  por defecto.
+- `evaluate` además guarda su tabla en `models/evaluacion_reservado.csv`.
+- Si una etapa falla, el traceback queda en el log y el comando sale con
+  código 1.
 
 ## Controles de calidad
 
@@ -189,6 +273,16 @@ uv sync --locked
 uv run --locked jupyter lab
 ```
 
+`uv sync` crea el entorno en `.venv/`. `uv run` lo usa sin activarlo; si se
+prefiere activarlo una vez por terminal y escribir los comandos sin prefijo:
+
+```shell
+source .venv/bin/activate
+jupyter lab
+fraud-detection all
+deactivate            # para salir del entorno
+```
+
 En macOS, XGBoost necesita además el runtime de OpenMP:
 
 ```shell
@@ -198,7 +292,8 @@ brew install libomp
 Las rutas se resuelven desde la raíz del repositorio, así que los notebooks
 corren desde cualquier directorio. `.vscode/settings.json` ya apunta VS Code
 a `.venv/bin/python`; si los imports no resuelven, es que está seleccionado
-otro intérprete.
+otro intérprete. Para correr un notebook desde VS Code, elegir como kernel el
+Python de `.venv` (**Select Kernel → Python Environments → .venv**).
 Para instalar y ejecutar los hooks localmente:
 
 ```shell
