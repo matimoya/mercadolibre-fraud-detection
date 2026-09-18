@@ -14,8 +14,10 @@ from fraud_detection.constants import (
     AMOUNT,
     BINARY_COLUMNS,
     CATEGORICAL_COLUMNS,
+    CATEGORY_DOMAINS,
     DATE,
     NUMERIC_COLUMNS,
+    SCORE_RANGE,
     TARGET,
     TEST_START,
 )
@@ -56,6 +58,21 @@ def normalize_text(frame: pd.DataFrame) -> pd.DataFrame:
     return clean
 
 
+def _check_domains(frame: pd.DataFrame) -> None:
+    """Rechazar códigos y escalas que el modelo aceptaría sin error pero leería mal."""
+    for col in BINARY_COLUMNS:
+        if not frame[col].dropna().isin([0, 1]).all():
+            raise ValueError(f"Revisar dominio de {col}.")
+    # Como float, 'a' pasaría el dominio (1.0 == 1) pero el one-hot la leería como "1.0".
+    if not pd.api.types.is_integer_dtype(frame["a"]):
+        raise ValueError("Revisar tipo de a: tiene que ser entero.")
+    for col, dominio in CATEGORY_DOMAINS.items():
+        if not frame[col].dropna().isin(dominio).all():
+            raise ValueError(f"Revisar dominio de {col}.")
+    if not frame["score"].dropna().between(*SCORE_RANGE).all():
+        raise ValueError("Revisar escala de score.")
+
+
 def validate_transactions(frame: pd.DataFrame) -> None:
     """Detener el pipeline ante errores esenciales, en lugar de corregirlos en silencio.
 
@@ -67,6 +84,10 @@ def validate_transactions(frame: pd.DataFrame) -> None:
     ValueError
         Si alguna regla del contrato de datos no se cumple.
     """
+    esperadas = NUMERIC_COLUMNS + CATEGORICAL_COLUMNS + BINARY_COLUMNS + [DATE, TARGET]
+    faltantes = sorted(set(esperadas) - set(frame.columns))
+    if faltantes:
+        raise ValueError(f"Faltan columnas del contrato: {faltantes}.")
     if not pd.api.types.is_datetime64_any_dtype(frame[DATE]):
         raise ValueError("Revisar formato de fecha.")
     if frame[DATE].isna().any():
@@ -76,9 +97,7 @@ def validate_transactions(frame: pd.DataFrame) -> None:
         raise ValueError("Revisar montos ausentes o infinitos.")
     if not frame[AMOUNT].gt(0).all():
         raise ValueError("Revisar montos no positivos y posibles devoluciones.")
-    for col in BINARY_COLUMNS:
-        if not frame[col].dropna().isin([0, 1]).all():
-            raise ValueError(f"Revisar dominio de {col}.")
+    _check_domains(frame)
 
     numericas = [
         col

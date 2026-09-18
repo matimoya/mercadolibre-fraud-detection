@@ -46,7 +46,7 @@ def test_normalizacion():
     pd.testing.assert_series_equal(limpio.monto, datos.monto)
 
 
-def test_contrato(development: pd.DataFrame):
+def test_contrato_valido(development: pd.DataFrame):
     """Un frame con el contrato del enunciado pasa la validación sin cambios."""
     validate_transactions(development)
 
@@ -58,10 +58,21 @@ def test_contrato(development: pd.DataFrame):
         lambda datos: datos.assign(**{TARGET: 2}),
         lambda datos: datos.assign(**{DATE: pd.NaT}),
         lambda datos: datos.drop(columns=["score"]),
+        lambda datos: datos.assign(o="X"),
+        lambda datos: datos.assign(a=datos.a.astype(float)),
+        lambda datos: datos.assign(score=150),
     ],
-    ids=["monto_negativo", "etiqueta_fuera_de_dominio", "fecha_nula", "columna_faltante"],
+    ids=[
+        "monto_negativo",
+        "etiqueta_fuera_de_dominio",
+        "fecha_nula",
+        "columna_faltante",
+        "codigo_nuevo",
+        "a_como_float",
+        "score_fuera_de_rango",
+    ],
 )
-def test_contrato_roto(development: pd.DataFrame, romper):
+def test_contrato_invalido(development: pd.DataFrame, romper):
     """Un error de origen detiene el pipeline en vez de corregirse en silencio."""
     with pytest.raises(ValueError):
         validate_transactions(romper(development))

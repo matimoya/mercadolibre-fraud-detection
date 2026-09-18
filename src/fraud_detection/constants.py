@@ -30,6 +30,10 @@ CATEGORICAL_COLUMNS = sorted(LOW_CARDINALITY_COLUMNS + HIGH_CARDINALITY_COLUMNS)
 
 BINARY_COLUMNS = ["n"]
 
+# Dominio cerrado: un código nuevo pasaría como fila de ceros en el one-hot, sin error.
+CATEGORY_DOMAINS = {"a": {1, 2, 3, 4}, "o": {"N", "Y"}, "p": {"N", "Y"}}
+SCORE_RANGE = (0, 100)
+
 # 'k' es uniforme(0, 1) e independiente de la etiqueta: variable de control.
 NOISE_COLUMNS = ["k"]
 
