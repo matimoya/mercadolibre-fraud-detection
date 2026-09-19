@@ -150,6 +150,16 @@ etiquetas y artefactos. La documentación oficial describe estas vistas en
 | `04-busqueda-hiperparametros` | Búsqueda y pruebas de Optuna. |
 | `05-evaluacion-final` | Evaluación reservada y modelo final. |
 
+La interfaz abre en modo GenAI: la primera vez, elegir **Model training** arriba
+a la izquierda, y queda recordado. La búsqueda de `04` guarda la mejor
+configuración y su ganancia contra la de defecto:
+
+![Corrida de la búsqueda en MLflow](docs/mlflow_busqueda.png)
+
+Y comparando sus pruebas se ve cómo cambia la ganancia con cada hiperparámetro:
+
+![Comparación de las pruebas en MLflow](docs/mlflow_pruebas.png)
+
 `04_tuning.ipynb` deja su configuración en `models/mejores_parametros.json`, que
 es lo que `05_evaluation.ipynb` carga para entrenar el modelo final. Esa
 separación es lo que hace que el período reservado se use una sola vez.
