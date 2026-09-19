@@ -8,7 +8,7 @@ import logging
 import os
 from pathlib import Path
 
-from fraud_detection.paths import ARTIFACTS_DIR, TRACKING_DB
+from fraud_detection.paths import ARTIFACTS_DIR, TRACKING_DB, desde_raiz
 
 # El aviso de MLflow sobre su skill de tracing se emite al importar el paquete,
 # así que la variable tiene que quedar antes del import y no junto al resto.
@@ -30,7 +30,7 @@ def configurar(
     Returns
     -------
     str
-        La URI del store, para poder mostrarla en el notebook.
+        El store relativo a la raíz, para mostrarlo en el notebook sin rutas de la máquina.
     """
     base = Path(tracking_db).resolve()
     artefactos = Path(artifacts_dir).resolve()
@@ -41,7 +41,7 @@ def configurar(
         mlflow.create_experiment(experimento, artifact_location=artefactos.as_uri())
     mlflow.set_experiment(experimento)
     logger.debug("MLflow en %s, experimento %s", uri, experimento)
-    return uri
+    return str(desde_raiz(base))
 
 
 def registrar(
