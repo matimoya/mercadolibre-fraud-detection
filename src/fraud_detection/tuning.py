@@ -7,6 +7,7 @@ from typing import Any
 
 import optuna
 import pandas as pd
+from optuna.distributions import FloatDistribution, IntDistribution
 from xgboost import XGBClassifier
 
 from fraud_detection.constants import N_SPLITS, N_TRIALS, RANDOM_STATE
@@ -22,23 +23,46 @@ optuna.logging.set_verbosity(optuna.logging.WARNING)
 logger = logging.getLogger(__name__)
 
 
-def suggest_params(trial: optuna.Trial) -> dict:
-    """Espacio de búsqueda de XGBoost.
+# El orden es parte del estado del sampler: cambiarlo cambia la secuencia de
+# pruebas aunque la semilla sea la misma.
+ESPACIO_XGBOOST: dict[str, IntDistribution | FloatDistribution] = {
+    "n_estimators": IntDistribution(200, 900, step=100),
+    "learning_rate": FloatDistribution(0.01, 0.2, log=True),
+    "max_depth": IntDistribution(3, 8),
+    "min_child_weight": IntDistribution(1, 20, log=True),
+    "subsample": FloatDistribution(0.6, 1.0),
+    "colsample_bytree": FloatDistribution(0.5, 1.0),
+    "reg_lambda": FloatDistribution(0.01, 10.0, log=True),
+    "gamma": FloatDistribution(0.0, 5.0),
+}
 
-    El orden de las sugerencias es parte del estado del sampler: cambiarlo
-    cambia la secuencia de pruebas aunque la semilla sea la misma.
-    """
+
+def describe_space() -> dict[str, dict]:
+    """El espacio de búsqueda en forma legible: rango, escala y paso de cada hiperparámetro."""
     return {
-        "n_estimators": trial.suggest_int("n_estimators", 200, 900, step=100),
-        "learning_rate": trial.suggest_float("learning_rate", 0.01, 0.2, log=True),
-        "max_depth": trial.suggest_int("max_depth", 3, 8),
-        "min_child_weight": trial.suggest_int("min_child_weight", 1, 20, log=True),
-        "subsample": trial.suggest_float("subsample", 0.6, 1.0),
-        "colsample_bytree": trial.suggest_float("colsample_bytree", 0.5, 1.0),
-        "reg_lambda": trial.suggest_float("reg_lambda", 0.01, 10.0, log=True),
-        "gamma": trial.suggest_float("gamma", 0.0, 5.0),
-        **XGBOOST_BASE,
+        nombre: {
+            "minimo": rango.low,
+            "maximo": rango.high,
+            "escala": "log" if rango.log else "lineal",
+            "paso": rango.step,
+        }
+        for nombre, rango in ESPACIO_XGBOOST.items()
     }
+
+
+def suggest_params(trial: optuna.Trial) -> dict:
+    """Una configuración de XGBoost sacada de `ESPACIO_XGBOOST`."""
+    parametros: dict[str, Any] = {}
+    for nombre, rango in ESPACIO_XGBOOST.items():
+        if isinstance(rango, IntDistribution):
+            parametros[nombre] = trial.suggest_int(
+                nombre, rango.low, rango.high, step=rango.step, log=rango.log
+            )
+        else:
+            parametros[nombre] = trial.suggest_float(
+                nombre, rango.low, rango.high, step=rango.step, log=rango.log
+            )
+    return {**parametros, **XGBOOST_BASE}
 
 
 def gain_over_folds(
@@ -161,6 +185,7 @@ def search_and_record(  # pragma: no cover
             }
         )
         mlflow.log_artifact(str(destino))
+        mlflow.log_dict(describe_space(), "espacio_de_busqueda.json")
     logger.info("ganancia con parámetros por defecto: %+.0f", ganancia_defecto)
     logger.info("pruebas guardadas en %s", desde_raiz(destino))
     return estudio, ganancia_defecto

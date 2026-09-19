@@ -28,6 +28,22 @@ def check_labels(frame: pd.DataFrame, target: str = "fraude") -> None:
         raise ValueError(f"'{target}' debe ser binaria 0/1 y no contener nulos.")
 
 
+# Sin test: describe, no decide nada.
+def column_profile(  # pragma: no cover
+    frame: pd.DataFrame, columns: list[str] | None = None
+) -> pd.DataFrame:
+    """Tipo, nulos y valores distintos de cada columna, en el orden del frame."""
+    selected = frame if columns is None else frame[columns]
+    return pd.DataFrame(
+        {
+            "tipo": selected.dtypes.astype(str),
+            "nulos": selected.isna().sum(),
+            "nulos_pct": selected.isna().mean() * 100,
+            "valores_distintos": selected.nunique(),
+        }
+    )
+
+
 def _grouping_keys(frame: pd.DataFrame, by, bins, missing_label: str) -> list[pd.Series]:
     """Normalizar by a una lista de series alineadas con frame."""
     if isinstance(by, pd.Series):
@@ -63,7 +79,7 @@ def rate_table(
     amount: str = "monto",
     missing_label: str = "Ausente",
 ) -> pd.DataFrame:
-    """Por grupo: cuántas transacciones, cuánto fraude y cuánta plata hay.
+    """Por grupo: cuántas transacciones, cuánto fraude y cuánto dinero hay.
 
     Parameters
     ----------
@@ -210,3 +226,42 @@ def iqr_report(frame: pd.DataFrame, columns: list[str]) -> pd.DataFrame:
             }
         )
     return pd.DataFrame(rows).set_index("variable")
+
+
+def population_stability_index(reference: pd.Series, current: pd.Series, bins: int = 10) -> float:
+    """Medir cuánto cambió una distribución respecto de la de referencia (PSI).
+
+    Parameters
+    ----------
+    reference : pandas.Series
+        Valores del período de referencia, típicamente el entrenamiento.
+    current : pandas.Series
+        Valores del período a vigilar.
+    bins : int, default=10
+        Tramos para variables numéricas, cortados en los cuantiles de la
+        referencia.
+
+    Returns
+    -------
+    float
+        Suma de (actual - referencia) * ln(actual / referencia) sobre los
+        tramos. Por convención, menos de 0,1 es estable, entre 0,1 y 0,25 un
+        cambio moderado, y más de 0,25 un cambio importante.
+
+    Notes
+    -----
+    Las categóricas usan una categoría por tramo. Los nulos son un tramo
+    propio en los dos casos, porque un cambio en la tasa de faltantes también
+    es un cambio de distribución.
+    """
+    if pd.api.types.is_numeric_dtype(reference):
+        edges = np.unique(reference.quantile(np.linspace(0, 1, bins + 1)).to_numpy())
+        edges[0], edges[-1] = -np.inf, np.inf
+        reference = pd.cut(reference, edges).astype(str)
+        current = pd.cut(current, edges).astype(str)
+    expected = reference.astype(str).value_counts(normalize=True)
+    actual = current.astype(str).value_counts(normalize=True)
+    expected, actual = expected.align(actual, fill_value=0.0)
+    # Sin piso, un tramo vacío en un período daría un logaritmo infinito.
+    expected, actual = expected.clip(lower=1e-4), actual.clip(lower=1e-4)
+    return float(((actual - expected) * np.log(actual / expected)).sum())
