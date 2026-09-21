@@ -2,8 +2,16 @@
 
 ## Ejecución con Docker
 
-Docker es la forma recomendada de ejecutar el proyecto. Desde la raíz, construir
-la imagen una vez:
+Docker es la forma recomendada de ejecutar el proyecto: la imagen empaqueta el
+entorno completo, con las mismas versiones que fija `uv.lock`. Si no está
+instalado, descargar
+[Docker Desktop](https://www.docker.com/products/docker-desktop/) y seguir la
+[guía de instalación](https://docs.docker.com/desktop/).
+
+Todos los comandos de este README se ejecutan desde la raíz del repositorio,
+porque lo que se comparte con el contenedor es la carpeta actual.
+
+Construir la imagen una vez:
 
 ```shell
 docker build -t meli-fraud .
@@ -17,15 +25,16 @@ Iniciar Jupyter Lab con:
 
 ```shell
 docker run --rm -it \
-  -p 8888:8888 \
+  -p 127.0.0.1:8888:8888 \
   -v "$PWD:/workspace" \
   meli-fraud
 ```
 
 El montaje `-v "$PWD:/workspace"` comparte el proyecto local con el contenedor.
 Así puede leer el CSV y conservar notebooks, modelos y resultados generados sin
-incorporarlos a la imagen. Abrir la URL con token que Jupyter muestra en la
-terminal, normalmente sobre [http://localhost:8888](http://localhost:8888).
+incorporarlos a la imagen. Abrir
+[http://localhost:8888](http://localhost:8888): no pide token, porque el puerto
+se publica solo en `127.0.0.1` y no queda accesible desde la red.
 
 ## Notebooks
 

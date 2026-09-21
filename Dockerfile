@@ -43,4 +43,5 @@ COPY notebooks ./notebooks
 
 EXPOSE 8888 5000
 
-CMD ["uv", "run", "--locked", "jupyter", "lab", "--ip=0.0.0.0", "--port=8888", "--no-browser", "--allow-root"]
+# Sin token porque el puerto se publica solo en 127.0.0.1.
+CMD ["uv", "run", "--locked", "jupyter", "lab", "--ip=0.0.0.0", "--port=8888", "--no-browser", "--allow-root", "--IdentityProvider.token="]
