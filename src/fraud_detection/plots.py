@@ -10,6 +10,7 @@ import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
 import seaborn as sns
 from matplotlib.patches import Patch
+from matplotlib.ticker import FuncFormatter
 
 from fraud_detection.modeling import temporal_folds
 
@@ -29,8 +30,8 @@ def plot_class_distribution(
     column : str
         Variable numérica continua.
     log_scale : bool, default=False
-        Graficar log1p del valor; requiere observaciones no negativas.
-        El resumen conserva las unidades originales.
+        Eje en escala logarítmica, rotulado en unidades originales; requiere
+        observaciones positivas.
     target : str, default="fraude"
         Columna de la etiqueta.
 
@@ -44,8 +45,9 @@ def plot_class_distribution(
     Raises
     ------
     ValueError
-        Si faltan clases, hay etiquetas inválidas, infinitos, valores negativos
-        con log_scale o alguna clase no tiene variación suficiente para KDE.
+        Si faltan clases, hay etiquetas inválidas, infinitos, valores no
+        positivos con log_scale o alguna clase no tiene variación suficiente
+        para KDE.
 
     Notes
     -----
@@ -58,8 +60,8 @@ def plot_class_distribution(
     observed = frame[column].dropna()
     if not np.isfinite(observed).all():
         raise ValueError("Revisar valores infinitos antes de graficar.")
-    if log_scale and observed.lt(0).any():
-        raise ValueError("log1p en este gráfico requiere valores no negativos.")
+    if log_scale and observed.le(0).any():
+        raise ValueError("La escala logarítmica requiere valores positivos.")
     grouped = frame.groupby(target)[column]
     summary = grouped.agg(
         total="size",
@@ -92,23 +94,32 @@ def plot_class_distribution(
     if plot_data.groupby(target)[column].nunique().min() < 2:
         raise ValueError("KDE requiere variación en ambas clases; usar frecuencias.")
     plot_data["clase"] = plot_data[target].map({0: "No fraude", 1: "Fraude"})
-    plot_data["valor"] = np.log1p(plot_data[column]) if log_scale else plot_data[column]
     fig, axes = plt.subplots(1, 2, figsize=(12, 4.3), gridspec_kw={"width_ratios": [2, 1]})
     sns.kdeplot(
         data=plot_data,
-        x="valor",
+        x=column,
         hue="clase",
         hue_order=["No fraude", "Fraude"],
         palette=PALETTE,
         common_norm=False,
         cut=0,
         linewidth=2.3,
+        log_scale=log_scale,
         ax=axes[0],
     )
+    for clase, color in PALETTE.items():
+        axes[0].axvline(summary.loc["mediana", clase], color=color, linestyle=":", linewidth=1.6)
+    if log_scale:
+        # Rótulos 1, 10, 100 en vez de 10⁰, 10¹, 10²: se lee el monto sin hacer cuentas.
+        axes[0].xaxis.set_major_formatter(FuncFormatter(lambda valor, _: f"{valor:g}"))
     axes[0].set(
-        title=f"{column}: distribución por clase",
-        xlabel=f"log(1 + {column})" if log_scale else column,
-        ylabel="Densidad (área 1 por clase)",
+        title=f"{column}: distribución por clase (punteada: mediana de cada clase)",
+        xlabel=(
+            f"{column} (escala logarítmica: cada marca es 10 veces la anterior)"
+            if log_scale
+            else column
+        ),
+        ylabel="Densidad (cada curva tiene área 1)",
     )
     axes[1].axis("off")
     values = [
