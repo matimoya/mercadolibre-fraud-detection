@@ -92,7 +92,7 @@ def validate_transactions(frame: pd.DataFrame) -> None:
         raise ValueError("Revisar formato de fecha.")
     if frame[DATE].isna().any():
         raise ValueError("Revisar fechas ausentes.")
-    check_labels(frame, TARGET)
+    check_labels(frame)
     if frame[AMOUNT].isna().any() or not np.isfinite(frame[AMOUNT]).all():
         raise ValueError("Revisar montos ausentes o infinitos.")
     if not frame[AMOUNT].gt(0).all():

@@ -14,7 +14,7 @@ from xgboost import XGBClassifier
 from fraud_detection import training, tuning
 from fraud_detection.constants import DATE, EXPERIMENTO_BUSQUEDA, N_TRIALS, TARGET
 from fraud_detection.dataset import load_periods
-from fraud_detection.evaluation import gain_by_policy
+from fraud_detection.evaluation import approve_all, gain_by_policy
 from fraud_detection.logs import registrar_corrida
 from fraud_detection.modeling import temporal_folds
 from fraud_detection.paths import BEST_PARAMS_JSON, EVALUATION_CSV, desde_raiz
@@ -56,7 +56,7 @@ def evaluate() -> None:
 
     probabilidad = artefacto["pipeline"].predict_proba(test.drop(columns=[TARGET]))[:, 1]
     politicas = {
-        "aprobar todo": pd.Series(True, index=test.index),
+        "aprobar todo": approve_all(test),
         "modelo": pd.Series(probabilidad, index=test.index).lt(artefacto["umbral"]),
     }
     tabla = gain_by_policy(test, politicas)

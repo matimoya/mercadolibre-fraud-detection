@@ -4,6 +4,7 @@ Simula qué habría rendido cada política sobre las transacciones históricas,
 usando sus etiquetas ya conocidas.
 """
 
+import numpy as np
 import pandas as pd
 
 from fraud_detection.constants import AMOUNT, GAIN_RATE, TARGET
@@ -35,12 +36,15 @@ def optimal_probability_threshold(gain_rate: float = GAIN_RATE) -> float:
     return gain_rate / (1 + gain_rate)
 
 
+def approve_all(frame: pd.DataFrame) -> pd.Series:
+    """Máscara de la política de referencia: aprobar todas las transacciones."""
+    return pd.Series(True, index=frame.index)
+
+
 def expected_gain(
     frame: pd.DataFrame,
     approve: pd.Series,
     gain_rate: float = GAIN_RATE,
-    target: str = TARGET,
-    amount: str = AMOUNT,
 ) -> float:
     """Ganancia de aprobar el subconjunto indicado por la máscara.
 
@@ -52,8 +56,6 @@ def expected_gain(
         Máscara booleana alineada con frame: True aprueba.
     gain_rate : float, default=GAIN_RATE
         Ganancia por unidad de monto de una legítima aprobada.
-    target, amount : str
-        Columnas de etiqueta y monto.
 
     Returns
     -------
@@ -65,18 +67,43 @@ def expected_gain(
     ValueError
         Si la máscara no está alineada con frame o contiene nulos.
     """
-    check_labels(frame, target)
+    check_labels(frame)
     if not approve.index.equals(frame.index) or approve.isna().any():
         raise ValueError("La máscara debe estar alineada y no contener nulos.")
     approved = frame.loc[approve.astype(bool)]
-    legit = approved.loc[approved[target].eq(0), amount].sum()
-    fraud = approved.loc[approved[target].eq(1), amount].sum()
+    legit = approved.loc[approved[TARGET].eq(0), AMOUNT].sum()
+    fraud = approved.loc[approved[TARGET].eq(1), AMOUNT].sum()
     return gain_rate * legit - fraud
 
 
-def max_gain(
-    frame: pd.DataFrame, gain_rate: float = GAIN_RATE, target: str = TARGET, amount: str = AMOUNT
-) -> float:
+def gain_contribution(
+    frame: pd.DataFrame, reject: pd.Series, gain_rate: float = GAIN_RATE
+) -> pd.Series:
+    """Cuánto suma o resta cada transacción rechazada frente a aprobar todo.
+
+    Es `expected_gain` abierta fila por fila: rechazar un fraude evita su monto
+    entero, rechazar una legítima cuesta la ganancia que habría dejado, y
+    aprobar no cambia nada respecto de la referencia.
+
+    Parameters
+    ----------
+    frame : pandas.DataFrame
+        Datos con etiqueta binaria y monto en unidades originales.
+    reject : pandas.Series
+        Máscara booleana alineada con frame: True rechaza.
+    gain_rate : float, default=GAIN_RATE
+        Ganancia por unidad de monto de una legítima aprobada.
+
+    Returns
+    -------
+    pandas.Series
+        Aporte de cada fila, que sumado da la ganancia sobre aprobar todo.
+    """
+    efecto = np.where(frame[TARGET].eq(1), 1.0, -gain_rate)
+    return pd.Series(np.where(reject, frame[AMOUNT] * efecto, 0.0), index=frame.index)
+
+
+def max_gain(frame: pd.DataFrame, gain_rate: float = GAIN_RATE) -> float:
     """Ganancia máxima alcanzable: aprobar todas las legítimas y ningún fraude.
 
     Parameters
@@ -85,15 +112,13 @@ def max_gain(
         Datos con etiqueta binaria y monto en unidades originales.
     gain_rate : float, default=GAIN_RATE
         Ganancia por unidad de monto de una legítima aprobada.
-    target, amount : str
-        Columnas de etiqueta y monto.
 
     Returns
     -------
     float
         Techo teórico de una predicción perfecta; ningún modelo lo supera.
     """
-    return expected_gain(frame, frame[target].eq(0), gain_rate, target, amount)
+    return expected_gain(frame, frame[TARGET].eq(0), gain_rate)
 
 
 def sweep_gain(
@@ -101,8 +126,6 @@ def sweep_gain(
     values: pd.Series,
     thresholds,
     gain_rate: float = GAIN_RATE,
-    target: str = TARGET,
-    amount: str = AMOUNT,
 ) -> pd.Series:
     """Probar muchos cortes: ganancia de aprobar cuando values < t.
 
@@ -117,8 +140,6 @@ def sweep_gain(
         Los cortes a probar, uno por uno.
     gain_rate : float, default=GAIN_RATE
         Ganancia por unidad de monto de una legítima aprobada.
-    target, amount : str
-        Columnas de etiqueta y monto.
 
     Returns
     -------
@@ -140,7 +161,7 @@ def sweep_gain(
         raise ValueError("values debe estar alineada con frame.")
     return pd.Series(
         {
-            corte: expected_gain(frame, values.lt(corte).fillna(False), gain_rate, target, amount)
+            corte: expected_gain(frame, values.lt(corte).fillna(False), gain_rate)
             for corte in thresholds
         },
         dtype=float,
@@ -151,8 +172,6 @@ def gain_by_policy(
     frame: pd.DataFrame,
     policies: dict[str, pd.Series],
     gain_rate: float = GAIN_RATE,
-    target: str = TARGET,
-    amount: str = AMOUNT,
 ) -> pd.DataFrame:
     """Comparar políticas de aprobación entre sí y contra la ganancia máxima.
 
@@ -164,8 +183,6 @@ def gain_by_policy(
         Nombre de la política y su máscara de aprobación.
     gain_rate : float, default=GAIN_RATE
         Ganancia por unidad de monto de una legítima aprobada.
-    target, amount : str
-        Columnas de etiqueta y monto.
 
     Returns
     -------
@@ -173,18 +190,18 @@ def gain_by_policy(
         Por política: ganancia, pct_del_maximo (porcentaje del techo que
         devuelve max_gain), aprobadas, aprobadas_pct y fraudes_aprobados.
     """
-    techo = max_gain(frame, gain_rate, target, amount)
+    techo = max_gain(frame, gain_rate)
     rows = {}
     for name, approve in policies.items():
         # expected_gain valida alineación y nulos: tiene que ver la máscara cruda,
         # porque astype(bool) convertiría un nulo en True —aprobar— en silencio.
-        gain = expected_gain(frame, approve, gain_rate, target, amount)
+        gain = expected_gain(frame, approve, gain_rate)
         mask = approve.astype(bool)
         rows[name] = {
             "ganancia": gain,
             "pct_del_maximo": 100 * gain / techo if techo else float("nan"),
             "aprobadas": int(mask.sum()),
             "aprobadas_pct": 100 * mask.sum() / len(frame),
-            "fraudes_aprobados": int(frame.loc[mask, target].sum()),
+            "fraudes_aprobados": int(frame.loc[mask, TARGET].sum()),
         }
     return pd.DataFrame(rows).T

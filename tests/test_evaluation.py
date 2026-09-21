@@ -5,8 +5,10 @@ import pytest
 
 from fraud_detection.constants import AMOUNT, GAIN_RATE, TARGET
 from fraud_detection.evaluation import (
+    approve_all,
     expected_gain,
     gain_by_policy,
+    gain_contribution,
     max_gain,
     optimal_probability_threshold,
 )
@@ -17,11 +19,6 @@ UMBRAL = optimal_probability_threshold()
 def frame(etiquetas: list[int], montos: list[float]) -> pd.DataFrame:
     """Las dos únicas columnas que la ganancia necesita."""
     return pd.DataFrame({TARGET: etiquetas, AMOUNT: montos})
-
-
-def aprobar_todo(grupo: pd.DataFrame) -> pd.Series:
-    """Máscara de la política de referencia."""
-    return pd.Series(True, index=grupo.index)
 
 
 def test_umbral():
@@ -41,7 +38,7 @@ def test_punto_de_indiferencia(desvio: float, conviene: bool, monto: float):
     fraudes = round(total * tasa)
     grupo = frame([1] * fraudes + [0] * (total - fraudes), [monto] * total)
 
-    assert bool(expected_gain(grupo, aprobar_todo(grupo)) > 0) is conviene
+    assert bool(expected_gain(grupo, approve_all(grupo)) > 0) is conviene
 
 
 def test_ganancia():
@@ -49,10 +46,8 @@ def test_ganancia():
     grupo = frame([0, 0, 1], [100.0, 100.0, 200.0])
     legitimas = fraude = 200.0
 
-    assert expected_gain(grupo, aprobar_todo(grupo)) == pytest.approx(
-        GAIN_RATE * legitimas - fraude
-    )
-    assert expected_gain(grupo, ~aprobar_todo(grupo)) == pytest.approx(0.0)
+    assert expected_gain(grupo, approve_all(grupo)) == pytest.approx(GAIN_RATE * legitimas - fraude)
+    assert expected_gain(grupo, ~approve_all(grupo)) == pytest.approx(0.0)
     assert max_gain(grupo) == pytest.approx(GAIN_RATE * legitimas)
 
 
@@ -60,8 +55,8 @@ def test_tabla_de_politicas():
     """Cada fila tiene que dar lo mismo que calcular esa política por separado."""
     grupo = frame([0, 1, 0, 1], [10.0, 20.0, 30.0, 40.0])
     politicas = {
-        "aprobar todo": aprobar_todo(grupo),
-        "rechazar todo": ~aprobar_todo(grupo),
+        "aprobar todo": approve_all(grupo),
+        "rechazar todo": ~approve_all(grupo),
         "rechazar fraude": grupo[TARGET].eq(0),
     }
 
@@ -70,6 +65,25 @@ def test_tabla_de_politicas():
     for nombre, mascara in politicas.items():
         assert tabla.loc[nombre, "ganancia"] == pytest.approx(expected_gain(grupo, mascara))
     assert tabla.loc["rechazar fraude", "pct_del_maximo"] == pytest.approx(100.0)
+
+
+def test_aporte_por_transaccion():
+    """Abrir la ganancia fila por fila tiene que dar lo mismo que calcularla entera.
+
+    Es la aserción que `05_evaluation` hacía a mano: si las dos formas de
+    aplicar la regla de negocio se separan, el desglose del informe deja de
+    sumar lo que dice la tabla.
+    """
+    grupo = frame([0, 1, 0, 1], [10.0, 20.0, 30.0, 40.0])
+    rechaza = pd.Series([False, True, True, False], index=grupo.index)
+
+    aporte = gain_contribution(grupo, rechaza)
+
+    assert aporte.sum() == pytest.approx(
+        expected_gain(grupo, ~rechaza) - expected_gain(grupo, approve_all(grupo))
+    )
+    # Rechazar evita el monto entero del fraude y cuesta la ganancia de la legítima.
+    assert list(aporte) == pytest.approx([0.0, 20.0, -GAIN_RATE * 30.0, 0.0])
 
 
 def test_mascara_desalineada():

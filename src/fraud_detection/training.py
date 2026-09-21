@@ -13,7 +13,7 @@ from sklearn.metrics import average_precision_score, roc_auc_score
 from sklearn.pipeline import Pipeline
 
 from fraud_detection.constants import DATE, RANDOM_STATE, TARGET
-from fraud_detection.evaluation import expected_gain, optimal_probability_threshold
+from fraud_detection.evaluation import approve_all, expected_gain, optimal_probability_threshold
 from fraud_detection.features import build_preprocessor
 from fraud_detection.paths import MODEL_JOBLIB, desde_raiz
 
@@ -83,7 +83,7 @@ def iter_fold_results(
         probabilidad = pd.Series(
             modelo.predict_proba(predictores.iloc[validacion])[:, 1], index=valid.index
         )
-        piso = expected_gain(valid, pd.Series(True, index=valid.index))
+        piso = expected_gain(valid, approve_all(valid))
 
         yield {
             "fold": numero,

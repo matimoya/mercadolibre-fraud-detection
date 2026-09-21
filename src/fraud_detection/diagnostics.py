@@ -8,24 +8,24 @@ cada fold. El monto siempre permanece en unidades originales.
 import numpy as np
 import pandas as pd
 
+from fraud_detection.constants import AMOUNT, DATE, TARGET
 
-def check_labels(frame: pd.DataFrame, target: str = "fraude") -> None:
+
+def check_labels(frame: pd.DataFrame) -> None:
     """Validar que la etiqueta sea binaria 0/1 sin nulos.
 
     Parameters
     ----------
     frame : pandas.DataFrame
         Datos a validar.
-    target : str, default="fraude"
-        Columna de la etiqueta.
 
     Raises
     ------
     ValueError
         Si la columna contiene nulos o valores fuera de {0, 1}.
     """
-    if not frame[target].isin([0, 1]).all():
-        raise ValueError(f"'{target}' debe ser binaria 0/1 y no contener nulos.")
+    if not frame[TARGET].isin([0, 1]).all():
+        raise ValueError(f"'{TARGET}' debe ser binaria 0/1 y no contener nulos.")
 
 
 # Sin test: describe, no decide nada.
@@ -75,8 +75,6 @@ def rate_table(
     frame: pd.DataFrame,
     by,
     bins: list | None = None,
-    target: str = "fraude",
-    amount: str = "monto",
     missing_label: str = "Ausente",
 ) -> pd.DataFrame:
     """Por grupo: cuántas transacciones, cuánto fraude y cuánto dinero hay.
@@ -90,8 +88,6 @@ def rate_table(
     bins : list, optional
         Cortes para discretizar una continua antes de agrupar. Incluye el
         borde inferior; los valores fuera de rango caen en missing_label.
-    target, amount : str
-        Columnas de etiqueta y monto.
     missing_label : str, default="Ausente"
         Etiqueta del grupo de nulos, que nunca se descarta.
 
@@ -108,22 +104,22 @@ def rate_table(
     descartarlos borraría ese patrón. monto_en_fraude es exposición si se
     aprobara el segmento, no una pérdida observada.
     """
-    check_labels(frame, target)
+    check_labels(frame)
     keys = _grouping_keys(frame, by, bins, missing_label)
-    work = frame[[target, amount]].copy()
-    work["monto_en_fraude"] = work[amount].where(work[target].eq(1), 0)
+    work = frame[[TARGET, AMOUNT]].copy()
+    work["monto_en_fraude"] = work[AMOUNT].where(work[TARGET].eq(1), 0)
     result = work.groupby(keys, dropna=False, observed=True).agg(
-        transacciones=(target, "size"),
-        fraudes=(target, "sum"),
-        fraude_pct=(target, "mean"),
-        monto_total=(amount, "sum"),
+        transacciones=(TARGET, "size"),
+        fraudes=(TARGET, "sum"),
+        fraude_pct=(TARGET, "mean"),
+        monto_total=(AMOUNT, "sum"),
         monto_en_fraude=("monto_en_fraude", "sum"),
     )
     result["fraude_pct"] *= 100
     result["volumen_pct"] = 100 * result["transacciones"] / len(frame)
-    total_fraud = frame[target].sum()
+    total_fraud = frame[TARGET].sum()
     result["fraudes_pct"] = 100 * result["fraudes"] / total_fraud if total_fraud else np.nan
-    base_rate = 100 * frame[target].mean()
+    base_rate = 100 * frame[TARGET].mean()
     result["lift"] = result["fraude_pct"] / base_rate if base_rate else np.nan
     return result[
         [
@@ -160,12 +156,12 @@ def summarize_segments(frame: pd.DataFrame, by: list[str]) -> pd.DataFrame:
     Los días observados cuentan días con transacciones y no demuestran
     cobertura completa de la fuente. Sin dimensión temporal, usar rate_table.
     """
-    work = frame.assign(dia=frame.fecha.dt.normalize())
+    work = frame.assign(dia=frame[DATE].dt.normalize())
     result = work.groupby(by, dropna=False, observed=True).agg(
-        transacciones=("fraude", "size"),
-        fraudes=("fraude", "sum"),
-        fraude_pct=("fraude", "mean"),
-        monto_mediano=("monto", "median"),
+        transacciones=(TARGET, "size"),
+        fraudes=(TARGET, "sum"),
+        fraude_pct=(TARGET, "mean"),
+        monto_mediano=(AMOUNT, "median"),
         desde=("dia", "min"),
         hasta=("dia", "max"),
         dias_observados=("dia", "nunique"),
@@ -222,7 +218,7 @@ def iqr_report(frame: pd.DataFrame, columns: list[str]) -> pd.DataFrame:
                 "aplicable": applicable,
                 "marcados": int(flags.sum()),
                 "pct_observados": 100 * flags.sum() / len(values) if len(values) else np.nan,
-                "fraudes_marcados": int(frame.loc[flags, "fraude"].sum()),
+                "fraudes_marcados": int(frame.loc[flags, TARGET].sum()),
             }
         )
     return pd.DataFrame(rows).set_index("variable")
