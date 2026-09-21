@@ -27,6 +27,7 @@ repos:
     rev: v0.23.2
     hooks:
       - id: markdownlint-cli2
+        exclude: '^informe/informe\.md$'
 
   - repo: local
     hooks:

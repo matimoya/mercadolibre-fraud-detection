@@ -16,8 +16,9 @@ mlflow.db
 mlartifacts/
 logs/
 
-# Borrador del informe: andamiaje local. Se versionan el PDF final y su generador.
+# Andamiaje local del informe. Se versionan el markdown, el PDF final y su generador.
 informe/*
+!informe/informe.md
 !informe/*.pdf
 !informe/generar_pdf.py
 !informe/extraer_figuras.py
