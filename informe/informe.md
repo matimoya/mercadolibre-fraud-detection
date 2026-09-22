@@ -248,9 +248,9 @@ Las entradas cambiaron, pero poco: el PSI (Population Stability Index), que mide
 | Cuándo | Qué se mira | Qué dispara |
 | :---- | :---- | :---- |
 | **Diario, sin etiquetas** (data drift) | PSI de cada columna y de la probabilidad del modelo, volumen, mix por país, faltantes, % de categorías nuevas y % de rechazo | Revisión si el PSI de alguna columna supera 0,1; en los 9 días de test ninguna lo superó |
-| **Cuando llegan las etiquetas** (concept drift y label shift) | Ganancia realizada contra la esperada, tasa de fraude, probabilidad predicha contra fraude observado, AUC | Recalibrar si cambió la tasa de fraude; reentrenar si la ganancia cae con la tasa estable |
+| **Semanal, con etiquetas confirmadas** (concept drift y label shift) | Ganancia realizada contra la esperada, tasa de fraude, probabilidad predicha contra fraude observado, AUC | Recalibrar si cambió la tasa de fraude; adelantar el reentrenamiento si la ganancia cae con la tasa estable |
 | **Continuo** | Que score y o sigan llegando con la misma escala y la misma proporción de vacíos | Pasar al modelo sin score, que ya está medido |
 
 Como complemento, Isolation Forest, que por sí solo ya ordena el fraude mejor que score (§3), puede mandar a revisión manual patrones de fraude nuevos que el modelo nunca vio.
 
-**6\. Reentrenar según la demora de las etiquetas**, no según el calendario, repitiendo el mismo procedimiento —validación temporal y un test que se mide una sola vez— y reemplazando al modelo vigente solo si lo supera. El umbral no se reentrena: sale de la regla de negocio, y si cambian los datos se recalibran las probabilidades.
+**6\. Reentrenar cada semana** con las transacciones cuya etiqueta ya se confirmó, repitiendo el procedimiento de este trabajo: validación con bloques temporales y una sola medición sobre un período reservado. El modelo nuevo reemplaza al vigente solo si deja más ganancia.
