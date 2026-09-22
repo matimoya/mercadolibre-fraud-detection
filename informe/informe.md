@@ -188,7 +188,7 @@ Si score resultara no estar disponible en el momento de decidir, el modelo sin e
 
 * **Validar contra el futuro, nunca al azar.** Todo se partió por fecha: cada bloque entrena con el pasado y se mide en la semana siguiente.
 * **Aislar un conjunto de test.** Los últimos 9 días no participan de ninguna decisión —para elegir están los cuatro bloques de validación— y se miden una sola vez, al final, como si fueran producción. Así, el resultado que se reporta es el de datos que el modelo nunca vio.
-* **Evitar la fuga de información.** Todo lo que se aprende de los datos, como la codificación de j y g por tasa de fraude, se ajusta solo con el entrenamiento de cada bloque; 02\_feature\_engineering.ipynb lo verifica con cuatro chequeos.
+* **Evitar la fuga de información.** Todo lo que se aprende de los datos, como la codificación de j y g por tasa de fraude, se ajusta solo con el entrenamiento de cada bloque; 02\_feature\_engineering.ipynb lo verifica.
 * **Medir la sensibilidad a la demora de etiquetas** en vez de suponerla: si tardaran una semana en confirmarse, la ganancia baja un 8,4%.
 * **Registrar cada experimento en MLflow**, con sus parámetros, métricas y artefactos, para poder revisar después por qué se eligió cada cosa; el README explica cómo abrirlo.
 
