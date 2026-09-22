@@ -202,7 +202,7 @@ Si score resultara no estar disponible en el momento de decidir, el modelo sin e
 
 # **Pregunta 4 — Suponiendo que la performance predictiva en producción es muy diferente a la esperada, ¿Cuáles cree que son las causas más probables?**
 
-Sesgo y varianza, las causas genéricas, no parecen ser la principal: el modelo final tiene AUC 0,9207 sobre los datos que vio y 0,8885 sobre el test. Una diferencia tan chica descarta que memorice su entrenamiento, y un AUC de 0,8885 muestra que sí aprende el problema. Si producción rinde muy distinto, lo más probable es que haya dejado de parecerse al entrenamiento:
+Sesgo y varianza, las causas genéricas, no parecen ser la principal: el modelo final tiene AUC 0,9207 sobre los datos que vio y 0,8885 sobre el test. Una diferencia de 0,03 no indica que memorice su entrenamiento, y un AUC de 0,8885 muestra que sí aprende el problema. Si producción rinde muy distinto, lo más probable es que haya dejado de parecerse al entrenamiento:
 
 **1\. Cambian los datos.** Conviene separar tres cambios, porque se detectan distinto:
 
