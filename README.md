@@ -71,7 +71,8 @@ nuevo, y del ajuste de hiperparámetros —+5.127 en validación— sobreviviero
 
 **No se persiste ningún dataset procesado.** El target encoding de las categóricas
 de alta cardinalidad se ajusta con el train de cada fold, dentro del Pipeline. El
-único artefacto que se guarda es el Pipeline entrenado —`models/`, excluida de Git—,
+único artefacto que se guarda es el Pipeline entrenado —`models/`, excluida de Git
+salvo `mejores_parametros.json`—,
 nunca la tabla de features; `02_feature_engineering.ipynb` verifica esa separación
 con cuatro chequeos y `05_evaluation.ipynb` comprueba que el artefacto recuperado
 reproduce las mismas probabilidades.
@@ -172,6 +173,9 @@ Y comparando sus pruebas se ve cómo cambia la ganancia con cada hiperparámetro
 `04_tuning.ipynb` deja su configuración en `models/mejores_parametros.json`, que
 es lo que `05_evaluation.ipynb` carga para entrenar el modelo final. Esa
 separación es lo que hace que el período reservado se use una sola vez.
+El JSON está versionado, así que `05_evaluation.ipynb` y `fraud-detection train`
+reproducen los números del informe sin volver a correr la búsqueda; correr `04`
+o `tune` lo reescribe.
 
 ## Línea de comandos
 
@@ -240,19 +244,8 @@ y la corrida completa, con el detalle por bloque, queda en
 `logs/<comando>-<fecha>.log`, excluida de Git. `-v` muestra ese detalle también
 en la terminal. La tabla de `evaluate` va por la salida estándar y los logs por
 la de errores, así que `fraud-detection evaluate > resultado.txt` guarda solo la
-tabla. En los notebooks esos logs no aparecen: solo la CLI los configura.
-
-Respecto de la versión anterior de la CLI, los comandos `tune`, `train` y
-`evaluate` se usan igual. Lo nuevo es:
-
-- `all`, que corre las tres etapas en orden.
-- `-v`, para ver el detalle por bloque, y el archivo de log de cada corrida.
-- `tune` registra en el experimento `04-busqueda-hiperparametros` y escribe el
-  mismo JSON que `04_tuning.ipynb`, incluida la ganancia de la configuración
-  por defecto.
-- `evaluate` además guarda su tabla en `models/evaluacion_reservado.csv`.
-- Si una etapa falla, el traceback queda en el log y el comando sale con
-  código 1.
+tabla. En los notebooks esos logs no aparecen: solo la CLI los configura. Si una
+etapa falla, el traceback queda en el log y el comando sale con código 1.
 
 ## Controles de calidad
 
