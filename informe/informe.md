@@ -10,9 +10,7 @@ El enunciado pide **maximizar la ganancia**. Cada transacción legítima aprobad
 
 ganancia \= 0,25 × (monto de las legítimas aprobadas) \- (monto de los fraudes aprobados)
 
-Aprobar conviene cuando 0,25 × monto × (1 \- p) \- monto × p \> 0. Al dividir por el monto —todos son estrictamente positivos— el monto desaparece de la desigualdad y queda **p \< 0,2**.
-
-Dejar pasar un fraude cuesta el monto entero; frenar una legítima cuesta solo el 25% que habría rendido. Un fraude pesa lo mismo que cuatro legítimas del mismo monto. Entonces, si de cada cinco transacciones que freno una es fraude, el fraude que evito paga justo las cuatro legítimas que resigno: ese es el punto de equilibrio, y es el 20%.
+Aprobar conviene cuando lo que se espera ganar supera lo que se espera perder, 0,25 × monto × (1 \- p) \> monto × p, y eso da **p \< 0,2** para cualquier monto: dejar pasar un fraude cuesta lo mismo que frenar cuatro legítimas del mismo monto.
 
 **El monto sale de la cuenta, pero no deja de importar.** El corte es el mismo para la transacción de 0,02 que para la de 3.696; lo que cambia es cuánto cuesta equivocarse en cada una. Por eso todo el informe se mide en dinero y no en cantidad de transacciones.
 
@@ -174,13 +172,11 @@ El modelo gana **8 de los 9 días**. El que pierde es el 15 de abril (-590), el 
 
 # **5\. Conclusión**
 
-**El modelo final es XGBoost, sin reponderar las clases, y rechaza una transacción cuando su probabilidad de fraude supera 0,2.** En los 9 días reservados, que no se usaron para ninguna decisión, deja **\+47.567** más que aprobar todo y **\+24.366** más que decidir solo con score: poco más del doble.
+**El modelo final es XGBoost, sin reponderar las clases, con umbral 0,2.** En los 9 días reservados deja **\+47.567** más que aprobar todo y **\+24.366** más que decidir solo con score. Si score no estuviera disponible al decidir, el modelo sin esa columna deja **\+37.867**, todavía 1,6 veces la regla, y queda medido como reemplazo; para o no hay reemplazo medido.
 
-Si score resultara no estar disponible en el momento de decidir, el modelo sin esa columna deja **\+37.867**: menos, pero todavía 1,6 veces lo que deja decidir con score. Se entrega el modelo con score porque es el que más gana y nada en los datos indica que score se calcule con información posterior a la transacción (sin data leakage); el modelo sin score queda medido como reemplazo si se confirmara lo contrario. La misma duda vale para o, y para esa columna no hay un modelo de reemplazo medido.
+**Como anticipaba la hipótesis, lo que movió la aguja fue la información y el umbral, no el algoritmo:** entre las tres familias hay a lo sumo un 2,3% de diferencia y del ajuste de hiperparámetros sobrevivieron \+164, mientras que sacar score cuesta un 20%.
 
-**Como anticipaba la hipótesis, lo que movió la aguja fue la información y el umbral, no el algoritmo.** Entre las tres familias hay a lo sumo un 2,3% de diferencia, y del ajuste de hiperparámetros sobrevivieron \+164. En cambio, sacar score cuesta un 20% en el período reservado, y cambiar la escala de las probabilidades sin mover el 0,2 hunde la ganancia de validación a \+3.846. Lo segundo que más pesa en el modelo es la ausencia de o, que el análisis exploratorio llevó a tratar como una categoría propia.
-
-**Pendiente:** medir la poda de las 17 columnas que pesan menos que la vara de ruido, y confirmar los supuestos abiertos con el equipo de Prevención de Fraude. Dos ya tienen su costo medido: sin score se gana un 20% menos en el período reservado, y una demora de etiquetas de una semana baja la ganancia de validación un 8,4%. Los otros —la moneda, cuándo se calcula o y el costo operativo de rechazar— no se pueden medir con estos datos.
+**Pendiente:** medir la poda de las 17 columnas que pesan menos que la vara de ruido y confirmar con el equipo de Prevención de Fraude los supuestos de §1.
 
 # **Pregunta 3 — ¿Qué pasos puedo seguir para intentar asegurar que la performance del modelo en laboratorio será similar a la de producción?**
 
@@ -190,7 +186,7 @@ Si score resultara no estar disponible en el momento de decidir, el modelo sin e
 * **Aislar un conjunto de test.** Los últimos 9 días no participan de ninguna decisión —para elegir están los cuatro bloques de validación— y se miden una sola vez, al final, como si fueran producción. Así, el resultado que se reporta es el de datos que el modelo nunca vio.
 * **Evitar la fuga de información.** Todo lo que se aprende de los datos, como la codificación de j y g por tasa de fraude, se ajusta solo con el entrenamiento de cada bloque; 02\_feature\_engineering.ipynb lo verifica.
 * **Medir la sensibilidad a la demora de etiquetas** en vez de suponerla: si tardaran una semana en confirmarse, la ganancia baja un 8,4%.
-* **Registrar cada experimento en MLflow**, con sus parámetros, métricas y artefactos, para poder revisar después por qué se eligió cada cosa; el README explica cómo abrirlo.
+* **Servir exactamente lo que se midió.** Las transformaciones viven dentro del pipeline entrenado, que se guarda y queda registrado en MLflow con sus parámetros; 05\_evaluation.ipynb comprueba que el artefacto recuperado da las mismas probabilidades. Así, producción no recalcula las variables de otra manera.
 
 **Lo que falta hacer antes de confiar en el número:**
 
@@ -204,13 +200,11 @@ Si score resultara no estar disponible en el momento de decidir, el modelo sin e
 
 Sesgo y varianza, las causas genéricas, no parecen ser la principal: el modelo final tiene AUC 0,9207 sobre los datos que vio y 0,8885 sobre el test. Una diferencia de 0,03 no indica que memorice su entrenamiento, y un AUC de 0,8885 muestra que sí aprende el problema. Si producción rinde muy distinto, lo más probable es que haya dejado de parecerse al entrenamiento:
 
-**1\. Cambian los datos.** Conviene separar tres cambios, porque se detectan distinto:
+**1\. Cambian los datos**, de tres maneras:
 
-| Qué cambia | Nombre | Cómo se detecta |
-| :---- | :---- | :---- |
-| La distribución de las **entradas**: más volumen, otro mix de país, categorías nuevas | **Data drift** | **Sin necesidad de etiquetas**, contra las distribuciones de entrenamiento. Es la alarma temprana |
-| La **relación entre las entradas y el fraude**, porque el defraudador cambió de método | **Concept drift** | Solo con etiquetas, así que se detecta **tarde** |
-| La **proporción** de fraude | **Label shift** | Con etiquetas. El umbral 0,2 no cambia, pero las probabilidades del modelo dejan de corresponder a la tasa real y hay que recalibrarlas |
+* **Data drift:** cambia la distribución de las entradas —más volumen, otro mix de país, categorías nuevas—.
+* **Concept drift:** cambia la relación entre las entradas y el fraude, sobre todo porque el defraudador cambia de método para evitar los rechazos.
+* **Label shift:** cambia la proporción de fraude. El umbral 0,2 sigue valiendo, pero las probabilidades del modelo dejan de corresponder a la tasa real y hay que recalibrarlas.
 
 **Y no es teórico: en los 9 días de test ya pasó.**
 
@@ -222,7 +216,7 @@ Sesgo y varianza, las causas genéricas, no parecen ser la principal: el modelo 
 | Probabilidad media del modelo | 0,048 | 0,048 | \-1,0% |
 | **Tasa real de fraude** | **5,18%** | **4,43%** | **\-14,5%** |
 
-Las entradas cambiaron, pero poco. Para medirlo se usa el PSI (Population Stability Index), el indicador estándar para vigilar si cambió la distribución de una variable: por debajo de 0,1 se considera estable. Ninguna columna lo superó, y la probabilidad media del modelo se movió apenas \-1,0%. Mientras tanto, la tasa real de fraude cayó \-14,5%: un cambio en el fraude en sí no se ve en las entradas, solo aparece cuando llegan las etiquetas.
+Las entradas cambiaron, pero poco: el PSI (Population Stability Index), que mide cuánto cambió la distribución de cada columna, fue chico en todas —el más alto, el de score, dio 0,0415— y la probabilidad media del modelo se movió apenas \-1,0%. Mientras tanto, la tasa real de fraude cayó \-14,5%: un cambio en el fraude en sí no se ve en las entradas, solo aparece cuando llegan las etiquetas.
 
 **2\. Los datos de entrada llegan distintos o rotos.** El modelo no avisa cuando una columna cambia: decide distinto.
 
@@ -232,13 +226,11 @@ Las entradas cambiaron, pero poco. Para medirlo se usa el PSI (Population Stabil
 
 **3\. El lazo de retroalimentación.** Las transacciones rechazadas nunca generan resultado, así que cada reentrenamiento ve solo las aprobadas: un sesgo que no aparece en ninguna métrica.
 
-**4\. La reacción del defraudador**, que cambia de método para evitar los rechazos: un concept drift deliberado.
-
 *Detalle: 05\_evaluation.ipynb §1 y §5.*
 
 # **Pregunta 5 — ¿Qué pasos debería seguir para poner el nuevo modelo en producción?**
 
-**1\. Confirmar los supuestos.** Qué es o, cuándo se calcula score y con qué garantía de disponibilidad, la moneda de los montos, la demora real de las etiquetas, y si rechazar tiene un costo operativo, del que depende el umbral.
+**1\. Confirmar los supuestos de §1** con el equipo de Prevención de Fraude, además de qué es o y con qué garantía llega score.
 
 **2\. Servir el mismo pipeline que se midió.** El servicio recibe la transacción, valida su esquema y su calidad, y devuelve probabilidad y decisión con el pipeline entrenado, sin reprogramar sus transformaciones. Si score no llega, responde el modelo sin score; si el modelo no responde, se aplica una regla de repliegue definida de antemano.
 
