@@ -10,11 +10,13 @@ __pycache__/
 .coverage
 
 data/
-models/
-machete.md
 mlflow.db
 mlartifacts/
 logs/
+
+# Se versiona solo la configuración de 04, para reproducir el informe sin repetir la búsqueda.
+models/*
+!models/mejores_parametros.json
 
 # Andamiaje local del informe. Se versionan el markdown y sus generadores; el PDF se genera local.
 informe/*
